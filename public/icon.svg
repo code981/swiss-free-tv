@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Swiss Free TV icon">
+  <rect width="512" height="512" rx="112" fill="#07111f"/>
+  <rect x="88" y="132" width="336" height="220" rx="38" fill="#0f172a" stroke="#38bdf8" stroke-width="20"/>
+  <path d="M230 198h52v44h44v52h-44v44h-52v-44h-44v-52h44z" fill="#ef4444"/>
+  <path d="M190 392h132" stroke="#7dd3fc" stroke-width="24" stroke-linecap="round"/>
+</svg>
