@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ExternalLink, Lock, PlayCircle, Plus, Search, ShieldCheck, Star, Trash2, Tv, WifiOff } from 'lucide-react';
+import { CheckCircle2, Download, ExternalLink, Lock, PlayCircle, Plus, Search, ShieldCheck, Sparkles, Star, Trash2, Tv, Upload, WifiOff } from 'lucide-react';
 import './styles.css';
 
 const channels = [
@@ -411,6 +411,10 @@ function App() {
   const [query, setQuery] = useState('');
   const [language, setLanguage] = useState('All');
   const [mode, setMode] = useState('All');
+  const [recentIds, setRecentIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('swiss-tv:recent') || '[]'); }
+    catch { return []; }
+  });
   const [customName, setCustomName] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [customRegion, setCustomRegion] = useState('Private');
@@ -438,10 +442,20 @@ function App() {
     localStorage.setItem('swiss-tv:custom-channels', JSON.stringify(customChannels));
   }, [customChannels]);
 
+  useEffect(() => {
+    localStorage.setItem('swiss-tv:recent', JSON.stringify(recentIds));
+  }, [recentIds]);
+
   const allChannels = useMemo(() => [...customChannels, ...channels], [customChannels]);
   const playableCount = allChannels.filter((c) => c.streamUrl).length;
   const selected = allChannels.find((c) => c.id === selectedId) || allChannels.find((c) => c.streamUrl) || allChannels[0];
   const favoriteSet = new Set(favorites);
+  const recentChannels = recentIds.map((id) => allChannels.find((channel) => channel.id === id)).filter(Boolean).slice(0, 4);
+  const featuredPlayable = allChannels.filter((channel) => channel.streamUrl).slice(0, 6);
+  const selectChannel = (id) => {
+    setSelectedId(id);
+    setRecentIds((current) => [id, ...current.filter((item) => item !== id)].slice(0, 8));
+  };
   const toggleFavorite = (id) => setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const resetFilters = () => {
     setQuery('');
@@ -468,7 +482,7 @@ function App() {
         streamUrl: url.href,
         custom: true,
       }, ...current]);
-      setSelectedId(id);
+      selectChannel(id);
       setCustomName('');
       setCustomUrl('');
     } catch {
@@ -479,7 +493,7 @@ function App() {
   const removeCustomChannel = (id) => {
     setCustomChannels((current) => current.filter((channel) => channel.id !== id));
     setFavorites((current) => current.filter((item) => item !== id));
-    if (selectedId === id) setSelectedId(channels.find((c) => c.streamUrl)?.id || channels[0].id);
+    if (selectedId === id) selectChannel(channels.find((c) => c.streamUrl)?.id || channels[0].id);
   };
 
   const exportPrivateChannels = () => {
@@ -540,16 +554,42 @@ function App() {
     <main>
       <section className="hero">
         <div>
-          <p className="eyebrow">Switzerland • legal sources • no app ads</p>
-          <h1>Swiss Free TV</h1>
+          <p className="eyebrow">Switzerland • instant TV launcher • no app ads</p>
+          <h1>Swiss TV, one clean screen.</h1>
           <p className="heroText">
-            A private Swiss TV dashboard with native playback for public streams and your own local HLS entries. No website iframes, no app ads, no tracking, no scraping, no paywall or ad bypassing.
+            Watch verified public streams directly, jump to official broadcaster pages, save favorites, and keep your own private HLS list in this browser. Fast, installable, and privacy-friendly.
           </p>
+          <div className="heroActions">
+            <button className="primary" type="button" onClick={() => setMode('Playable')}><PlayCircle size={17} /> Show playable</button>
+            <button className="secondary" type="button" onClick={() => setMode('Favorites')}><Star size={17} /> Favorites</button>
+            <a className="secondary" href="#private-streams"><Plus size={17} /> Add stream</a>
+          </div>
         </div>
         <div className="trustBox">
           <ShieldCheck size={28} />
-          <strong>Legal-first</strong>
-          <span>{playableCount} channels playable in-app now, including private entries saved only in this browser.</span>
+          <strong>Clean by design</strong>
+          <span>No trackers, no iframes, no proxying. {playableCount} sources can play in-app now; private entries stay local.</span>
+          <div className="trustList">
+            <span><CheckCircle2 size={15} /> PWA-ready</span>
+            <span><CheckCircle2 size={15} /> Favorites</span>
+            <span><CheckCircle2 size={15} /> Import/export</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="quickPanel">
+        <div>
+          <p className="eyebrow">Start fast</p>
+          <h2>Featured playable channels</h2>
+        </div>
+        <div className="quickGrid">
+          {featuredPlayable.map((channel) => (
+            <button key={channel.id} type="button" className={selected.id === channel.id ? 'quickCard active' : 'quickCard'} onClick={() => selectChannel(channel.id)}>
+              <PlayCircle size={18} />
+              <span>{channel.name}</span>
+              <em>{channel.language}</em>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -580,7 +620,27 @@ function App() {
         )}
       </div>
 
-      <Player channel={selected} />
+      <section className="watchLayout">
+        <Player channel={selected} />
+        <aside className="sidePanel">
+          <div className="sideCard">
+            <p className="eyebrow">Now selected</p>
+            <h2>{selected.name}</h2>
+            <p>{selected.region} • {selected.language} • {selected.streamUrl ? 'Playable' : 'Official source'}</p>
+            <button className={favoriteSet.has(selected.id) ? 'primary' : 'secondary'} type="button" onClick={() => toggleFavorite(selected.id)}>
+              <Star size={16} fill={favoriteSet.has(selected.id) ? 'currentColor' : 'none'} /> {favoriteSet.has(selected.id) ? 'Saved' : 'Save favorite'}
+            </button>
+          </div>
+          <div className="sideCard">
+            <p className="eyebrow">Recently opened</p>
+            {recentChannels.length ? recentChannels.map((channel) => (
+              <button key={channel.id} className="miniChannel" type="button" onClick={() => selectChannel(channel.id)}>
+                <span>{channel.name}</span><em>{channel.language}</em>
+              </button>
+            )) : <p className="muted">Open a few channels and they’ll appear here.</p>}
+          </div>
+        </aside>
+      </section>
 
       <section className="statsRow">
         <div><strong>{allChannels.length}</strong><span>Sources tracked</span></div>
@@ -588,7 +648,7 @@ function App() {
         <div><strong>{customChannels.length}</strong><span>Private local entries</span></div>
       </section>
 
-      <section className="privatePanel">
+      <section id="private-streams" className="privatePanel">
         <div className="sectionIntro">
           <p className="eyebrow">Private use</p>
           <h2>Add your own stream</h2>
@@ -609,8 +669,8 @@ function App() {
           <button className="primary" type="submit"><Plus size={16} /> Add private stream</button>
         </form>
         <div className="privateActions">
-          <button className="secondary" type="button" onClick={() => importRef.current?.click()}>Import private list</button>
-          <button className="secondary" type="button" onClick={exportPrivateChannels} disabled={customChannels.length === 0}>Export private list</button>
+          <button className="secondary" type="button" onClick={() => importRef.current?.click()}><Upload size={16} /> Import private list</button>
+          <button className="secondary" type="button" onClick={exportPrivateChannels} disabled={customChannels.length === 0}><Download size={16} /> Export private list</button>
           <input ref={importRef} type="file" accept="application/json" hidden onChange={importPrivateChannels} />
         </div>
         {customError && <p id="custom-url-error" className="formError" role="alert">{customError}</p>}
@@ -651,7 +711,7 @@ function App() {
                 type="button"
                 aria-label={`Select ${channel.name}`}
                 aria-pressed={selected.id === channel.id}
-                onClick={() => setSelectedId(channel.id)}
+                onClick={() => selectChannel(channel.id)}
               >
                 <div className={`logoTile ${playable ? 'playable' : ''}`}>{playable ? <PlayCircle size={22} /> : <Tv size={22} />}</div>
                 <div className="rowMain">
@@ -690,7 +750,7 @@ function App() {
       </section>
 
       <footer>
-        <p>Swiss Free TV does not host or retransmit broadcaster content. Channel availability, geo-restrictions, and advertising inside official players are controlled by the broadcasters.</p>
+        <p><Sparkles size={14} /> Swiss Free TV does not host or retransmit broadcaster content. Channel availability, geo-restrictions, and advertising inside official players are controlled by the broadcasters.</p>
       </footer>
     </main>
   );
