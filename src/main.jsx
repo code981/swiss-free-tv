@@ -381,6 +381,14 @@ const qualityLabel = (channel) => {
   return { label: 'Offizielle Quelle', score: 'B', tone: 'Legal link-out' };
 };
 
+const sourceTransparency = (channel) => {
+  if (channel.custom) return 'Private local stream added by you. It is stored only in this browser.';
+  if (channel.streamUrl) return 'Verified direct HLS source. If playback fails, use the broadcaster link as fallback.';
+  if (channel.type?.includes('Regional')) return 'Regional broadcaster is listed as an official handoff because no clearly reusable public HLS source is verified yet.';
+  if (channel.type === 'Official') return 'Broadcaster rights, ads, geo-rules, or DRM usually require opening the official player directly.';
+  return 'Listed for legal discovery only until a reliable official public stream can be verified.';
+};
+
 const humanNotes = [
   {
     title: 'Für Apple TV / Sofa gedacht',
@@ -466,7 +474,7 @@ function Player({ channel }) {
           <Lock size={42} />
           <h3>No native stream embedded</h3>
           <p>
-            This channel is listed for discovery, but we do not show the broadcaster website inside the app and we do not proxy, scrape, or bypass ads/paywalls. A native player will be added only when a legal direct stream or partner API is available.
+            {sourceTransparency(channel)} We do not show the broadcaster website inside the app and we do not proxy, scrape, or bypass ads/paywalls. A native player will be added only when a legal direct stream or partner API is available.
           </p>
           <a className="primary" href={channel.officialUrl} target="_blank" rel="noreferrer">Open official source</a>
         </div>
