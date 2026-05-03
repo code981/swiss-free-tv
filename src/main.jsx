@@ -384,7 +384,17 @@ const qualityLabel = (channel) => {
 const sourceTransparency = (channel) => {
   if (channel.custom) return 'Private local stream added by you. It is stored only in this browser.';
   if (channel.streamUrl) return 'Verified direct HLS source. If playback fails, use the broadcaster link as fallback.';
-  if (channel.type?.includes('Regional')) return 'Regional broadcaster is listed as an official handoff because no clearly reusable public HLS source is verified yet.';
+
+  const officialUrl = channel.officialUrl || '';
+  if (/srf\.ch|rts\.ch|rsi\.ch/.test(officialUrl)) {
+    return 'SRG SSR live channels are handed off to the official Play player because rights windows, ads, geo-rules and stream tokens are managed there.';
+  }
+  if (/arte\.tv|ardmediathek\.de/.test(officialUrl)) {
+    return 'Public DACH/EU broadcasters are linked to their official live players until a stable, reusable public HLS endpoint is verified.';
+  }
+  if (channel.type?.includes('Regional')) {
+    return 'Regional broadcaster is listed as an official handoff because no clearly reusable public HLS source is verified yet.';
+  }
   if (channel.type === 'Official') return 'Broadcaster rights, ads, geo-rules, or DRM usually require opening the official player directly.';
   return 'Listed for legal discovery only until a reliable official public stream can be verified.';
 };
