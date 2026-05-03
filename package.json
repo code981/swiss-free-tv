@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "audit:product": "node scripts/product-audit.mjs",
+    "ci": "npm run audit:product && npm run build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
