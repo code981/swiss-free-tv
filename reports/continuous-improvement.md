@@ -1,6 +1,6 @@
 # Continuous Product Audit
 
-Generated: 2026-05-03T04:54:50.218Z
+Generated: 2026-05-03T05:21:55.858Z
 
 ## Snapshot
 
@@ -14,14 +14,13 @@ Generated: 2026-05-03T04:54:50.218Z
 
 - Duplicate IDs: none
 - Duplicate names: none
-- Weak descriptions: RTS 1, RTS Info, RSI LA 1, TeleZüri, Tele 1, TVO, Couleur 3 Video, Meteonews TV, Radio 3i TV
+- Weak descriptions: none
 - Non-HTTPS/suspicious URLs: none
 
 ## Next improvement candidates
 
 - Find 4+ additional clearly legal public HLS streams, prioritising Swiss regional/local sources.
 - For listed-only channels, add better official-source context and “why not playable” transparency.
-- Add first-run onboarding explaining legal playback, favorites, and private streams.
 - Add provider comparison content for SEO and future affiliate/business path.
 
 ## Guardrails

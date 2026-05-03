@@ -40,7 +40,7 @@ const channels = [
     region: 'Romandie',
     language: 'FR',
     type: 'Official',
-    description: 'French-speaking Swiss public TV by RTS.',
+    description: 'Main French-speaking Swiss public channel for news, fiction, culture and national live events by RTS.',
     officialUrl: 'https://www.rts.ch/play/tv/direct/rts-1?tvLiveId=3608506',
     streamUrl: '',
   },
@@ -60,7 +60,7 @@ const channels = [
     region: 'Romandie',
     language: 'FR',
     type: 'Official',
-    description: 'Continuous news and information from RTS.',
+    description: 'Continuous French-language news, live briefings, context programmes and information from RTS.',
     officialUrl: 'https://www.rts.ch/play/tv/direct/rts-info?tvLiveId=1967124',
     streamUrl: '',
   },
@@ -70,7 +70,7 @@ const channels = [
     region: 'Svizzera italiana',
     language: 'IT',
     type: 'Official',
-    description: 'Italian-speaking Swiss public TV by RSI.',
+    description: 'Main Italian-speaking Swiss public channel for news, entertainment, sport and cultural programming by RSI.',
     officialUrl: 'https://www.rsi.ch/play/tv/live/la-1?tvLiveId=livestream_La1',
     streamUrl: '',
   },
@@ -90,7 +90,7 @@ const channels = [
     region: 'Zürich',
     language: 'DE',
     type: 'Regional official',
-    description: 'Regional news and programming for Zürich.',
+    description: 'Regional news, debates, reports and local programming for Zürich and the surrounding area.',
     officialUrl: 'https://www.telezueri.ch/live',
     streamUrl: '',
   },
@@ -120,7 +120,7 @@ const channels = [
     region: 'Zentralschweiz',
     language: 'DE',
     type: 'Regional official',
-    description: 'Regional TV for Central Switzerland.',
+    description: 'Regional news, talk formats and local coverage for Central Switzerland and the Lucerne area.',
     officialUrl: 'https://www.tele1.ch/live',
     streamUrl: '',
   },
@@ -130,7 +130,7 @@ const channels = [
     region: 'Ostschweiz',
     language: 'DE',
     type: 'Regional official',
-    description: 'Regional TV for Eastern Switzerland.',
+    description: 'Regional news, magazines and local reporting for Eastern Switzerland with official live access.',
     officialUrl: 'https://www.tvo-online.ch/live',
     streamUrl: '',
   },
@@ -210,7 +210,7 @@ const channels = [
     region: 'Romandie',
     language: 'FR',
     type: 'Public stream',
-    description: 'RTS Couleur 3 visual radio/video stream.',
+    description: 'RTS Couleur 3 visual radio and video stream for music, culture clips and live studio moments.',
     officialUrl: 'https://www.rts.ch/audio-podcast/2021/emission/couleur-3-25000474.html',
     streamUrl: 'https://rtsc3video.akamaized.net/hls/live/2042837/c3video/3/playlist.m3u8',
   },
@@ -220,7 +220,7 @@ const channels = [
     region: 'Switzerland',
     language: 'DE/FR',
     type: 'Public stream',
-    description: 'Swiss weather information TV stream.',
+    description: 'Swiss weather information TV stream with forecasts, radar-style updates and regional weather context.',
     officialUrl: 'https://www.meteonews.ch/',
     streamUrl: 'https://streaming.meteonews.net/hls/stream.m3u8',
   },
@@ -240,7 +240,7 @@ const channels = [
     region: 'Ticino',
     language: 'IT',
     type: 'Public stream',
-    description: 'Ticino visual radio / TV stream.',
+    description: 'Ticino visual radio and TV stream combining music, studio video and regional Italian-language content.',
     officialUrl: 'https://www.radio3i.ch/',
     streamUrl: 'https://vstream-cdn.ch/hls/radio3i.m3u8',
   },
@@ -480,6 +480,12 @@ function App() {
     try { return JSON.parse(localStorage.getItem('swiss-tv:favorites') || '[]'); }
     catch { return []; }
   });
+  const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem('swiss-tv:onboarding-complete') !== 'yes');
+
+  const finishOnboarding = () => {
+    localStorage.setItem('swiss-tv:onboarding-complete', 'yes');
+    setShowOnboarding(false);
+  };
 
   useEffect(() => {
     localStorage.setItem('swiss-tv:selected-channel', selectedId);
@@ -676,6 +682,21 @@ function App() {
           </div>
         </div>
       </section>
+
+      {showOnboarding && (
+        <section className="onboardingPanel" aria-label="First-run onboarding">
+          <div>
+            <p className="eyebrow">First run</p>
+            <h2>Three things to know before you watch</h2>
+          </div>
+          <div className="onboardingGrid">
+            <article><ShieldCheck size={18} /><strong>Legal playback only</strong><span>Native video appears only for public, verified HLS streams. Everything else opens at the official broadcaster.</span></article>
+            <article><Star size={18} /><strong>Favorites stay local</strong><span>Save channels for sofa use without creating an account or syncing a profile.</span></article>
+            <article><Plus size={18} /><strong>Your own streams</strong><span>Private HLS entries live only in this browser and can be exported as a local JSON backup.</span></article>
+          </div>
+          <button className="primary" type="button" onClick={finishOnboarding}>Got it</button>
+        </section>
+      )}
 
       <section className="quickPanel">
         <div>

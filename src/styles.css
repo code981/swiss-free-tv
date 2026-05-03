@@ -105,6 +105,12 @@ footer { margin-top: 24px; color: #7d8da5; font-size: 13px; line-height: 1.5; }
 .trustList span { display: inline-flex; align-items: center; gap: 7px; color: #dbeafe; }
 .quickPanel { margin: 12px 0 18px; border: 1px solid rgba(125, 211, 252, .18); background: linear-gradient(135deg, rgba(14,165,233,.1), rgba(15,23,42,.58)); border-radius: 26px; padding: 18px; }
 .quickPanel h2 { margin: 0 0 14px; font-size: 24px; letter-spacing: -.03em; }
+.onboardingPanel { margin: 12px 0 18px; border: 1px solid rgba(34, 197, 94, .26); background: linear-gradient(135deg, rgba(34,197,94,.1), rgba(15,23,42,.7)); border-radius: 26px; padding: 18px; display: grid; gap: 16px; }
+.onboardingPanel h2 { margin: 0; font-size: 24px; letter-spacing: -.03em; }
+.onboardingGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.onboardingGrid article { border: 1px solid rgba(148, 163, 184, .18); background: rgba(2, 6, 23, .36); border-radius: 18px; padding: 15px; display: grid; gap: 8px; }
+.onboardingGrid strong { font-size: 17px; }
+.onboardingGrid span { color: #aabbd1; line-height: 1.38; font-size: 13px; }
 .quickGrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
 .quickCard { min-height: 86px; border: 1px solid rgba(148, 163, 184, .2); background: rgba(2, 6, 23, .42); color: #eef4ff; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; cursor: pointer; text-align: left; transition: transform .16s ease, border-color .16s ease, background .16s ease; }
 .quickCard:hover, .quickCard.active { transform: translateY(-2px); border-color: rgba(56, 189, 248, .65); background: rgba(14, 165, 233, .16); }
@@ -158,7 +164,7 @@ footer p { display: inline-flex; align-items: center; gap: 7px; }
 
 @media (max-width: 1040px) {
   .collectionGrid { grid-template-columns: repeat(2, 1fr); }
-  .insightGrid, .humanPanel { grid-template-columns: 1fr; }
+  .insightGrid, .humanPanel, .onboardingGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
