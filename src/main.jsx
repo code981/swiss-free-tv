@@ -616,6 +616,40 @@ function App() {
     });
   }, [query, language, mode, favorites, allChannels]);
 
+  useEffect(() => {
+    const isTypingField = (element) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(element?.tagName);
+    const moveSelection = (direction) => {
+      if (!filtered.length) return;
+      const currentIndex = filtered.findIndex((channel) => channel.id === selectedId);
+      const fallbackIndex = currentIndex === -1 ? 0 : currentIndex;
+      const nextIndex = (fallbackIndex + direction + filtered.length) % filtered.length;
+      selectChannel(filtered[nextIndex].id);
+    };
+
+    const onKeyDown = (event) => {
+      if (isTypingField(event.target)) return;
+      if (['ArrowRight', 'ArrowDown'].includes(event.key)) {
+        event.preventDefault();
+        moveSelection(1);
+      }
+      if (['ArrowLeft', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault();
+        moveSelection(-1);
+      }
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        toggleFavorite(selectedId);
+      }
+      if (event.key === '/') {
+        event.preventDefault();
+        document.querySelector('[data-channel-search]')?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [filtered, selectedId]);
+
   return (
     <main>
       <section className="hero">
@@ -691,7 +725,7 @@ function App() {
       <section className="toolbar">
         <label className="searchBox">
           <Search size={18} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search channel, region, language…" />
+          <input data-channel-search value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search channel, region, language…" />
         </label>
         <select value={language} onChange={(e) => setLanguage(e.target.value)} aria-label="Filter channels by language">
           <option>All</option>
@@ -725,6 +759,11 @@ function App() {
             <button className={favoriteSet.has(selected.id) ? 'primary' : 'secondary'} type="button" onClick={() => toggleFavorite(selected.id)}>
               <Star size={16} fill={favoriteSet.has(selected.id) ? 'currentColor' : 'none'} /> {favoriteSet.has(selected.id) ? 'Saved' : 'Save favorite'}
             </button>
+          </div>
+          <div className="sideCard remoteCard">
+            <p className="eyebrow">Remote mode</p>
+            <h2>Lean-back shortcuts</h2>
+            <p className="muted">Use ↑ ↓ ← → to move through the filtered list, <kbd>F</kbd> to save a favorite, and <kbd>/</kbd> to search.</p>
           </div>
           <div className="sideCard">
             <p className="eyebrow">Recently opened</p>
