@@ -347,6 +347,24 @@ const legalProviders = [
   },
 ];
 
+const providerComparison = [
+  {
+    fit: 'Best licensed Swiss TV app',
+    choice: 'Teleboy or Zattoo',
+    reason: 'Use when you want replay, recording, broad channel rights, and a polished account-based Swiss TV experience.',
+  },
+  {
+    fit: 'Best privacy-first companion',
+    choice: 'This app',
+    reason: 'Use when you want a local launcher, verified public streams, private HLS entries, and no tracking or cloud profile.',
+  },
+  {
+    fit: 'Best official broadcaster fallback',
+    choice: 'SRF / RTS / RSI / regional sites',
+    reason: 'Use when rights, ads, geo-rules, or DRM mean the legal route is opening the broadcaster directly.',
+  },
+];
+
 const collections = [
   { id: 'All', label: 'Alle Sender', hint: 'Der komplette legale Katalog', icon: Tv },
   { id: 'Playable', label: 'Sofort live', hint: 'Direkt im Browser spielbar', icon: Zap },
@@ -855,6 +873,24 @@ function App() {
               <p>{provider.highlight}</p>
               <em>Open <ExternalLink size={13} /></em>
             </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="comparisonPanel" aria-label="Swiss TV provider comparison">
+        <div className="sectionIntro">
+          <p className="eyebrow">Provider comparison</p>
+          <h2>When to use a licensed TV app vs this companion</h2>
+          <p>This is the SEO/business bridge: honest recommendations instead of pretending one app can legally replace every licensed Swiss TV platform.</p>
+        </div>
+        <div className="comparisonGrid">
+          {providerComparison.map((item) => (
+            <article key={item.fit}>
+              <CheckCircle2 size={18} />
+              <span>{item.fit}</span>
+              <strong>{item.choice}</strong>
+              <p>{item.reason}</p>
+            </article>
           ))}
         </div>
       </section>

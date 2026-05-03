@@ -1,6 +1,6 @@
 # Continuous Product Audit
 
-Generated: 2026-05-03T05:21:55.858Z
+Generated: 2026-05-03T05:24:01.187Z
 
 ## Snapshot
 
@@ -21,7 +21,6 @@ Generated: 2026-05-03T05:21:55.858Z
 
 - Find 4+ additional clearly legal public HLS streams, prioritising Swiss regional/local sources.
 - For listed-only channels, add better official-source context and “why not playable” transparency.
-- Add provider comparison content for SEO and future affiliate/business path.
 
 ## Guardrails
 
