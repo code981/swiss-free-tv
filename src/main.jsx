@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CheckCircle2, Download, ExternalLink, Lock, PlayCircle, Plus, Search, ShieldCheck, Sparkles, Star, Trash2, Tv, Upload, WifiOff } from 'lucide-react';
+import { CheckCircle2, Clock3, Download, ExternalLink, Eye, Gauge, HeartHandshake, Lock, MapPin, PlayCircle, Plus, Search, ShieldCheck, Sparkles, Star, Trash2, Tv, Upload, WifiOff, Zap } from 'lucide-react';
 import './styles.css';
 
 const channels = [
@@ -306,6 +306,20 @@ const channels = [
   },
 ];
 
+const normalizeHttpUrl = (value) => {
+  const url = new URL(String(value || '').trim());
+  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported URL protocol');
+  return url.href;
+};
+
+const normalizeOptionalHttpUrl = (value, fallback) => {
+  try {
+    return normalizeHttpUrl(value);
+  } catch {
+    return fallback;
+  }
+};
+
 const legalProviders = [
   {
     name: 'Teleboy',
@@ -330,6 +344,37 @@ const legalProviders = [
     url: 'https://www.wilmaa.com/',
     badge: 'Swiss TV app',
     highlight: 'Licensed Swiss TV app model with account-based access instead of exposed raw streams.',
+  },
+];
+
+const collections = [
+  { id: 'All', label: 'Alle Sender', hint: 'Der komplette legale Katalog', icon: Tv },
+  { id: 'Playable', label: 'Sofort live', hint: 'Direkt im Browser spielbar', icon: Zap },
+  { id: 'Swiss', label: 'Schweiz zuerst', hint: 'SRG, Regional-TV, lokale Sender', icon: MapPin },
+  { id: 'Favorites', label: 'Meine Liste', hint: 'Deine gespeicherten Sender', icon: Star },
+  { id: 'Listed', label: 'Offizielle Quellen', hint: 'Saubere Links statt Grauzone', icon: ShieldCheck },
+];
+
+const swissRegions = ['Deutschschweiz', 'Romandie', 'Svizzera italiana', 'Zürich', 'Bern', 'Ticino', 'Basel', 'Valais', 'Genève', 'Jura', 'Neuchâtel', 'Switzerland'];
+
+const qualityLabel = (channel) => {
+  if (channel.custom) return { label: 'Privat', score: 'Lokal', tone: 'Personal' };
+  if (channel.streamUrl) return { label: 'Direkt spielbar', score: 'A', tone: 'Verified HLS' };
+  return { label: 'Offizielle Quelle', score: 'B', tone: 'Legal link-out' };
+};
+
+const humanNotes = [
+  {
+    title: 'Für Apple TV / Sofa gedacht',
+    text: 'Grosse Targets, klare Fokus-Zustände und keine nervösen Banner — eher Fernbedienung als Website.',
+  },
+  {
+    title: 'Legal statt “irgendwie streamen”',
+    text: 'Der Wert liegt in geprüfter Navigation, privaten Listen und sauberer Transparenz, nicht im Kopieren lizenzierter Plattformen.',
+  },
+  {
+    title: 'Privacy als Feature',
+    text: 'Favoriten und private Streams bleiben lokal im Browser. Keine Accounts, kein Tracking, kein fremder Proxy.',
   },
 ];
 
@@ -373,14 +418,20 @@ function Player({ channel }) {
   if (!channel) return null;
 
   const playable = Boolean(channel.streamUrl);
+  const quality = qualityLabel(channel);
 
   return (
-    <section className="playerPanel">
+    <section className="playerPanel" aria-label="Selected channel player">
       <div className="playerHeader">
         <div>
-          <p className="eyebrow">{playable ? 'Live in app' : 'Listed channel'}</p>
+          <p className="eyebrow">{playable ? 'Live in app' : 'Official source'}</p>
           <h2>{channel.name}</h2>
           <p>{channel.description}</p>
+          <div className="qualityPills">
+            <span><Gauge size={14} /> {quality.score}</span>
+            <span>{quality.label}</span>
+            <span>{channel.region}</span>
+          </div>
         </div>
         <a className="officialButton" href={channel.officialUrl} target="_blank" rel="noreferrer">
           Official source <ExternalLink size={16} />
@@ -451,7 +502,11 @@ function App() {
   const selected = allChannels.find((c) => c.id === selectedId) || allChannels.find((c) => c.streamUrl) || allChannels[0];
   const favoriteSet = new Set(favorites);
   const recentChannels = recentIds.map((id) => allChannels.find((channel) => channel.id === id)).filter(Boolean).slice(0, 4);
-  const featuredPlayable = allChannels.filter((channel) => channel.streamUrl).slice(0, 6);
+  const swissCount = allChannels.filter((channel) => swissRegions.some((region) => channel.region.includes(region))).length;
+  const featuredPlayable = allChannels
+    .filter((channel) => channel.streamUrl)
+    .sort((a, b) => (swissRegions.some((region) => b.region.includes(region)) ? 1 : 0) - (swissRegions.some((region) => a.region.includes(region)) ? 1 : 0))
+    .slice(0, 6);
   const selectChannel = (id) => {
     setSelectedId(id);
     setRecentIds((current) => [id, ...current.filter((item) => item !== id)].slice(0, 8));
@@ -468,8 +523,7 @@ function App() {
     setCustomError('');
 
     try {
-      const url = new URL(customUrl.trim());
-      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported URL protocol');
+      const streamUrl = normalizeHttpUrl(customUrl);
       const id = `custom-${Date.now()}`;
       setCustomChannels((current) => [{
         id,
@@ -478,8 +532,8 @@ function App() {
         language: customLanguage,
         type: 'Private stream',
         description: 'Private local entry stored only in this browser.',
-        officialUrl: url.href,
-        streamUrl: url.href,
+        officialUrl: streamUrl,
+        streamUrl,
         custom: true,
       }, ...current]);
       selectChannel(id);
@@ -509,25 +563,36 @@ function App() {
   const importPrivateChannels = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > 256 * 1024) {
+      setCustomError('That private-channel backup is too large. Exported lists should stay below 256 KB.');
+      event.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const parsed = JSON.parse(String(reader.result || '{}'));
         const incoming = Array.isArray(parsed) ? parsed : parsed.channels;
         if (!Array.isArray(incoming)) throw new Error('Invalid channel backup');
-        const sanitized = incoming
-          .filter((channel) => channel?.name && channel?.streamUrl)
-          .map((channel, index) => ({
-            id: `custom-import-${Date.now()}-${index}`,
-            name: String(channel.name).slice(0, 80),
-            region: String(channel.region || 'Private').slice(0, 80),
-            language: String(channel.language || 'DE').slice(0, 12),
-            type: 'Private stream',
-            description: 'Private local entry imported into this browser.',
-            officialUrl: String(channel.officialUrl || channel.streamUrl),
-            streamUrl: String(channel.streamUrl),
-            custom: true,
-          }));
+        const sanitized = incoming.flatMap((channel, index) => {
+          if (!channel?.name || !channel?.streamUrl) return [];
+          try {
+            const streamUrl = normalizeHttpUrl(channel.streamUrl);
+            return [{
+              id: `custom-import-${Date.now()}-${index}`,
+              name: String(channel.name).slice(0, 80),
+              region: String(channel.region || 'Private').slice(0, 80),
+              language: String(channel.language || 'DE').slice(0, 12),
+              type: 'Private stream',
+              description: 'Private local entry imported into this browser.',
+              officialUrl: normalizeOptionalHttpUrl(channel.officialUrl, streamUrl),
+              streamUrl,
+              custom: true,
+            }];
+          } catch {
+            return [];
+          }
+        });
         setCustomChannels((current) => [...sanitized, ...current]);
         setCustomError(sanitized.length ? `Imported ${sanitized.length} private stream${sanitized.length === 1 ? '' : 's'}.` : 'No valid private streams found in that file.');
       } catch {
@@ -544,8 +609,9 @@ function App() {
     return allChannels.filter((c) => {
       const matchesQuery = !q || [c.name, c.region, c.language, c.description].join(' ').toLowerCase().includes(q);
       const matchesLanguage = language === 'All' || c.language.includes(language);
+      const isSwiss = swissRegions.some((region) => c.region.includes(region));
       const matchesMode = mode === 'All'
-        || (mode === 'Playable' ? c.streamUrl : mode === 'Favorites' ? favoriteSet.has(c.id) : !c.streamUrl);
+        || (mode === 'Playable' ? c.streamUrl : mode === 'Favorites' ? favoriteSet.has(c.id) : mode === 'Swiss' ? isSwiss : !c.streamUrl);
       return matchesQuery && matchesLanguage && matchesMode;
     });
   }, [query, language, mode, favorites, allChannels]);
@@ -554,10 +620,10 @@ function App() {
     <main>
       <section className="hero">
         <div>
-          <p className="eyebrow">Switzerland • instant TV launcher • no app ads</p>
-          <h1>Swiss TV, one clean screen.</h1>
+          <p className="eyebrow">Swiss TV companion • Apple-TV style • privacy first</p>
+          <h1>Swiss TV that feels curated, not dumped.</h1>
           <p className="heroText">
-            Watch verified public streams directly, jump to official broadcaster pages, save favorites, and keep your own private HLS list in this browser. Fast, installable, and privacy-friendly.
+            A premium launcher for Swiss television: verified public streams when legally possible, official broadcaster handoff when not, private local lists for power users, and a calmer living-room interface that respects people.
           </p>
           <div className="heroActions">
             <button className="primary" type="button" onClick={() => setMode('Playable')}><PlayCircle size={17} /> Show playable</button>
@@ -565,22 +631,51 @@ function App() {
             <a className="secondary" href="#private-streams"><Plus size={17} /> Add stream</a>
           </div>
         </div>
-        <div className="trustBox">
+        <div className="trustBox appPreview" aria-label="Product preview">
           <ShieldCheck size={28} />
-          <strong>Clean by design</strong>
-          <span>No trackers, no iframes, no proxying. {playableCount} sources can play in-app now; private entries stay local.</span>
+          <strong>Built for trust</strong>
+          <span>No trackers, no iframes, no proxying. {playableCount} sources play in-app now; private entries stay local.</span>
           <div className="trustList">
-            <span><CheckCircle2 size={15} /> PWA-ready</span>
-            <span><CheckCircle2 size={15} /> Favorites</span>
-            <span><CheckCircle2 size={15} /> Import/export</span>
+            <span><CheckCircle2 size={15} /> Remote-friendly cards</span>
+            <span><CheckCircle2 size={15} /> Human curation</span>
+            <span><CheckCircle2 size={15} /> Import/export privacy vault</span>
           </div>
         </div>
       </section>
 
       <section className="quickPanel">
         <div>
-          <p className="eyebrow">Start fast</p>
-          <h2>Featured playable channels</h2>
+          <p className="eyebrow">Pick a path</p>
+          <h2>Designed around how people actually watch</h2>
+        </div>
+        <div className="collectionGrid">
+          {collections.map(({ id, label, hint, icon: Icon }) => (
+            <button key={id} type="button" className={mode === id ? 'collectionCard active' : 'collectionCard'} onClick={() => setMode(id)}>
+              <Icon size={20} />
+              <strong>{label}</strong>
+              <span>{hint}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="conciergePanel">
+        <div className="sectionIntro">
+          <p className="eyebrow">Swiss TV Concierge</p>
+          <h2>Not just channels — decisions made easier</h2>
+          <p>A good TV app should reduce friction: what can I watch instantly, what is official-only, what is Swiss, and what did I open last?</p>
+        </div>
+        <div className="insightGrid">
+          <div><Eye size={18} /><strong>{featuredPlayable.length} quick picks</strong><span>Playable sources surfaced first instead of buried in a catalogue.</span></div>
+          <div><Clock3 size={18} /><strong>{recentChannels.length || '0'} recent</strong><span>Personal rhythm without an account or cloud profile.</span></div>
+          <div><MapPin size={18} /><strong>{swissCount} Swiss/local</strong><span>Swiss-first catalog logic, not generic IPTV noise.</span></div>
+        </div>
+      </section>
+
+      <section className="quickPanel compact">
+        <div>
+          <p className="eyebrow">Watch now</p>
+          <h2>Featured legal streams</h2>
         </div>
         <div className="quickGrid">
           {featuredPlayable.map((channel) => (
@@ -645,7 +740,17 @@ function App() {
       <section className="statsRow">
         <div><strong>{allChannels.length}</strong><span>Sources tracked</span></div>
         <div><strong>{playableCount}</strong><span>Native in-app streams</span></div>
-        <div><strong>{customChannels.length}</strong><span>Private local entries</span></div>
+        <div><strong>{swissCount}</strong><span>Swiss/local sources</span></div>
+      </section>
+
+      <section className="humanPanel">
+        {humanNotes.map((note) => (
+          <article key={note.title}>
+            <HeartHandshake size={20} />
+            <h3>{note.title}</h3>
+            <p>{note.text}</p>
+          </article>
+        ))}
       </section>
 
       <section id="private-streams" className="privatePanel">
@@ -724,7 +829,7 @@ function App() {
               </button>
               <div className="rowMeta">
                 <span>{channel.region}</span>
-                <strong>{channel.custom ? 'Private' : playable ? 'Watch now' : 'Provider needed'}</strong>
+                <strong>{qualityLabel(channel).label}</strong>
                 <button
                   className={`favoriteButton ${favoriteSet.has(channel.id) ? 'active' : ''}`}
                   type="button"

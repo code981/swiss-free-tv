@@ -23,6 +23,10 @@ npm run dev
 npm run build
 ```
 
+## Product direction
+
+This project is moving toward a premium Swiss TV companion: Apple-TV-style launcher, legal source clarity, local/private stream control, and Swiss-first curation. See [PRODUCT_STRATEGY.md](./PRODUCT_STRATEGY.md).
+
 ## Privacy notes
 
 - Favorites and private stream entries stay in browser `localStorage`.
