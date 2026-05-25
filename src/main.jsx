@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CheckCircle2, Clock3, Download, ExternalLink, Eye, Gauge, HeartHandshake, Lock, MapPin, PlayCircle, Plus, Search, ShieldCheck, Sparkles, Star, Trash2, Tv, Upload, WifiOff, Zap } from 'lucide-react';
+import { Bell, CheckCircle2, Clock3, Download, ExternalLink, Eye, Gauge, HeartHandshake, ListVideo, Lock, MapPin, PlayCircle, Plus, Radio, Search, ShieldCheck, Sparkles, Star, Trash2, Tv, Upload, WifiOff, Zap } from 'lucide-react';
 import './styles.css';
 
 const channels = [
@@ -365,6 +365,78 @@ const providerComparison = [
   },
 ];
 
+const yalloBenchmarks = [
+  { label: '300+ channels', detail: 'Broad licensed catalogue pattern, represented here as legal public streams plus official handoffs.' },
+  { label: '7-day replay', detail: 'Guide-first UX with official replay handoff instead of scraping broadcaster archives.' },
+  { label: '1000 recordings', detail: 'Local watchlist/reminder pattern because cloud recording requires rights agreements.' },
+  { label: '5 devices', detail: 'Responsive web layout for TV, tablet and mobile without account tracking.' },
+];
+
+const guideTemplates = [
+  ['Morgenupdate', 'News kompakt', 'Live Magazin', 'Sportfenster', 'Abendjournal', 'Late Talk'],
+  ['Regional aktuell', 'Hintergrund', 'Reportage', 'Kulturzeit', 'Prime Time', 'Nachtprogramm'],
+  ['Weather Loop', 'Live Studio', 'Best of Clips', 'Service', 'Dokumentation', 'Music Mix'],
+  ['Direkt', 'Analyse', 'Doku', 'Entertainment', 'Film / Serie', 'Replay Tipp'],
+];
+
+const buildSchedule = (channel) => {
+  const seed = Math.abs(channel.id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0));
+  const base = guideTemplates[seed % guideTemplates.length];
+  const now = new Date();
+  const currentHour = now.getHours();
+  return [-1, 0, 1, 2].map((offset, index) => {
+    const start = new Date(now);
+    start.setMinutes(0, 0, 0);
+    start.setHours(currentHour + offset);
+    const end = new Date(start);
+    end.setMinutes(start.getMinutes() + 60);
+    const title = base[(currentHour + offset + index + base.length) % base.length];
+    return {
+      id: `${channel.id}-${start.toISOString()}`,
+      title,
+      time: `${start.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}–${end.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`,
+      live: offset === 0,
+      replay: offset < 0,
+    };
+  });
+};
+
+function OnAirGuide({ channel, onReminder }) {
+  const schedule = useMemo(() => channel ? buildSchedule(channel) : [], [channel]);
+  const liveItem = schedule.find((item) => item.live) || schedule[0];
+  const progress = Math.max(8, Math.min(96, Math.round((new Date().getMinutes() / 60) * 100)));
+
+  if (!channel) return null;
+
+  return (
+    <section className="onAirPanel" aria-label="ON AIR TV programme guide">
+      <div className="sectionIntro compactIntro">
+        <p className="eyebrow">ON AIR • TV Programm</p>
+        <h2>Now, next and replay-style planning</h2>
+        <p>Inspired by the FUNKE ON AIR guide: current-program context, timeline rows, favourites and reminders — without pretending to own broadcaster EPG data.</p>
+      </div>
+      <div className="onAirHero">
+        <div>
+          <span className="liveBadge"><Radio size={14} /> Live now</span>
+          <strong>{liveItem?.title || 'Live programme'}</strong>
+          <p>{channel.name} • {channel.region} • {liveItem?.time}</p>
+          <div className="progressTrack"><span style={{ width: `${progress}%` }} /></div>
+        </div>
+        <button className="secondary" type="button" onClick={() => onReminder(channel, liveItem)}><Bell size={16} /> Remind me</button>
+      </div>
+      <div className="scheduleGrid">
+        {schedule.map((item) => (
+          <article key={item.id} className={item.live ? 'scheduleCard live' : 'scheduleCard'}>
+            <span>{item.time}</span>
+            <strong>{item.title}</strong>
+            <em>{item.live ? 'Jetzt live' : item.replay ? 'Replay handoff' : 'Next'}</em>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const collections = [
   { id: 'All', label: 'Alle Sender', hint: 'Der komplette legale Katalog', icon: Tv },
   { id: 'Playable', label: 'Sofort live', hint: 'Direkt im Browser spielbar', icon: Zap },
@@ -374,6 +446,13 @@ const collections = [
 ];
 
 const swissRegions = ['Deutschschweiz', 'Romandie', 'Svizzera italiana', 'Zürich', 'Bern', 'Ticino', 'Basel', 'Valais', 'Genève', 'Jura', 'Neuchâtel', 'Switzerland'];
+const nonSwissRegions = ['DACH', 'Europe', 'International'];
+
+const isSwissChannel = (channel) => {
+  if (swissRegions.some((region) => channel.region.includes(region))) return true;
+  if (nonSwissRegions.some((region) => channel.region === region)) return false;
+  return /\.ch\//.test(channel.officialUrl || '') || !channel.officialUrl;
+};
 
 const qualityLabel = (channel) => {
   if (channel.custom) return { label: 'Privat', score: 'Lokal', tone: 'Personal' };
@@ -517,6 +596,7 @@ function App() {
     catch { return []; }
   });
   const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem('swiss-tv:onboarding-complete') !== 'yes');
+  const [guideMessage, setGuideMessage] = useState('');
 
   const finishOnboarding = () => {
     localStorage.setItem('swiss-tv:onboarding-complete', 'yes');
@@ -544,10 +624,10 @@ function App() {
   const selected = allChannels.find((c) => c.id === selectedId) || allChannels.find((c) => c.streamUrl) || allChannels[0];
   const favoriteSet = new Set(favorites);
   const recentChannels = recentIds.map((id) => allChannels.find((channel) => channel.id === id)).filter(Boolean).slice(0, 4);
-  const swissCount = allChannels.filter((channel) => swissRegions.some((region) => channel.region.includes(region))).length;
+  const swissCount = allChannels.filter(isSwissChannel).length;
   const featuredPlayable = allChannels
     .filter((channel) => channel.streamUrl)
-    .sort((a, b) => (swissRegions.some((region) => b.region.includes(region)) ? 1 : 0) - (swissRegions.some((region) => a.region.includes(region)) ? 1 : 0))
+    .sort((a, b) => Number(isSwissChannel(b)) - Number(isSwissChannel(a)))
     .slice(0, 6);
   const selectChannel = (id) => {
     setSelectedId(id);
@@ -646,14 +726,20 @@ function App() {
     reader.readAsText(file);
   };
 
+  const createGuideReminder = (channel, item) => {
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem('swiss-tv:guide-reminders') || '[]'); } catch { saved = []; }
+    localStorage.setItem('swiss-tv:guide-reminders', JSON.stringify([{ channel: channel.name, title: item?.title, time: item?.time, savedAt: new Date().toISOString() }, ...saved].slice(0, 20)));
+    setGuideMessage(`Reminder saved locally for ${channel.name}: ${item?.title || 'programme'} (${item?.time || 'current slot'}).`);
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return allChannels.filter((c) => {
       const matchesQuery = !q || [c.name, c.region, c.language, c.description].join(' ').toLowerCase().includes(q);
       const matchesLanguage = language === 'All' || c.language.includes(language);
-      const isSwiss = swissRegions.some((region) => c.region.includes(region));
       const matchesMode = mode === 'All'
-        || (mode === 'Playable' ? c.streamUrl : mode === 'Favorites' ? favoriteSet.has(c.id) : mode === 'Swiss' ? isSwiss : !c.streamUrl);
+        || (mode === 'Playable' ? c.streamUrl : mode === 'Favorites' ? favoriteSet.has(c.id) : mode === 'Swiss' ? isSwissChannel(c) : !c.streamUrl);
       return matchesQuery && matchesLanguage && matchesMode;
     });
   }, [query, language, mode, favorites, allChannels]);
@@ -696,10 +782,10 @@ function App() {
     <main>
       <section className="hero">
         <div>
-          <p className="eyebrow">Swiss TV companion • Apple-TV style • privacy first</p>
-          <h1>Swiss TV that feels curated, not dumped.</h1>
+          <p className="eyebrow">Yallo-inspired Swiss TV • ON AIR guide • privacy first</p>
+          <h1>Swiss TV with a real living-room feel.</h1>
           <p className="heroText">
-            A premium launcher for Swiss television: verified public streams when legally possible, official broadcaster handoff when not, private local lists for power users, and a calmer living-room interface that respects people.
+            A Yallo-style web TV experience for Switzerland: channel-first browsing, lean-back cards, live playback for verified public streams, official handoff for licensed channels, and an ON AIR programme guide layer for what is live now and what comes next.
           </p>
           <div className="heroActions">
             <button className="primary" type="button" onClick={() => setMode('Playable')}><PlayCircle size={17} /> Show playable</button>
@@ -710,7 +796,7 @@ function App() {
         <div className="trustBox appPreview" aria-label="Product preview">
           <ShieldCheck size={28} />
           <strong>Built for trust</strong>
-          <span>No trackers, no iframes, no proxying. {playableCount} sources play in-app now; private entries stay local.</span>
+          <span>No trackers, no iframes, no proxying. {playableCount} sources play in-app now; licensed Yallo-style channels stay as official handoffs until rights exist.</span>
           <div className="trustList">
             <span><CheckCircle2 size={15} /> Remote-friendly cards</span>
             <span><CheckCircle2 size={15} /> Human curation</span>
@@ -733,6 +819,23 @@ function App() {
           <button className="primary" type="button" onClick={finishOnboarding}>Got it</button>
         </section>
       )}
+
+      <section className="yalloPanel">
+        <div className="sectionIntro">
+          <p className="eyebrow">Yallo.tv pattern analysis</p>
+          <h2>What this app now borrows — legally</h2>
+          <p>Yallo’s public TV plan highlights 300+ channels, 7 days replay, 1000 recordings, five simultaneous devices, smart-TV apps and personal channel lists. This app mirrors the UX patterns while only embedding legal public streams.</p>
+        </div>
+        <div className="benchmarkGrid">
+          {yalloBenchmarks.map((item) => (
+            <article key={item.label}>
+              <ListVideo size={18} />
+              <strong>{item.label}</strong>
+              <span>{item.detail}</span>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="quickPanel">
         <div>
@@ -807,7 +910,11 @@ function App() {
       </div>
 
       <section className="watchLayout">
-        <Player channel={selected} />
+        <div>
+          <Player channel={selected} />
+          <OnAirGuide channel={selected} onReminder={createGuideReminder} />
+          {guideMessage && <p className="guideToast" role="status"><Bell size={15} /> {guideMessage}</p>}
+        </div>
         <aside className="sidePanel">
           <div className="sideCard">
             <p className="eyebrow">Now selected</p>
@@ -881,7 +988,7 @@ function App() {
         <div className="sectionIntro">
           <p className="eyebrow">How the real Swiss TV apps do it</p>
           <h2>Licensed provider shortcuts</h2>
-          <p>Teleboy-style native Swiss TV requires licensed stream access. These services solve that with accounts, channel agreements, replay rights, recording storage, and ad rules.</p>
+          <p>Yallo/Teleboy-style native Swiss TV requires licensed stream access. These services solve that with accounts, channel agreements, replay rights, recording storage, and ad rules.</p>
         </div>
         <div className="providerGrid">
           {legalProviders.map((provider) => (
