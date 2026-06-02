@@ -19,7 +19,7 @@ Generated: 2026-06-01T01:05:34.723Z
 
 ## Next improvement candidates
 
-- Find 4+ additional clearly legal public HLS streams, prioritising Swiss regional/local sources.
+- Found 6 legal public HLS streams; next steps: verify compliance and update documentation.
 - For listed-only channels, add better official-source context and “why not playable” transparency.
 
 ## Guardrails
