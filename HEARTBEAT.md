@@ -15,4 +15,4 @@
   - Check for brittle automations, missing verification gates, cost/usage risks, and over-broad permissions.
   - Keep Memory Wiki healthy after memory changes: run wiki status/compile when the plugin is available, and only surface real errors or useful new synthesized pages.
   - Use `AI_AGENT_LESSONS.md` as the operating checklist; update it only when a genuinely new durable lesson appears.
-- **Status (2026-06-04)**: Swiss TV app at commit `faf10a3`. HLS streams audit completed; 6 legal public streams documented. CI passes, build successful.
+- **Status (2026-06-05)**: Swiss TV app at commit `47fb377`. HLS audit report added, 6 legal streams documented. CI passes, build successful.
