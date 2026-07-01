@@ -32,7 +32,7 @@
 ## Next Improvement Candidates
 
 - Find 4+ additional clearly legal public HLS streams, prioritising Swiss regional/local sources.
-- For listed-only channels, add better official-source context and “why not playable” transparency.
+- For listed-only channels, add better official-source context and "why not playable" transparency.
 
 ## Guardrails
 
